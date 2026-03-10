@@ -1,0 +1,55 @@
+# ValekOS APT Repositories Configuration
+# Format: deb [options] uri suite components
+
+# ============================================
+# UBUNTU BASE (22.04 LTS - Jammy)
+# ============================================
+deb http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu jammy-updates main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu jammy-security main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse
+
+# Source repositories (for building packages)
+# deb-src http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse
+
+# ============================================
+# LINUX MINT (Victoria - 21.3)
+# ============================================
+deb http://packages.linuxmint.com victoria main upstream import backport
+# deb-src http://packages.linuxmint.com victoria main upstream import backport
+
+# ============================================
+# KDE PLASMA BACKPORTS (Latest KDE)
+# ============================================
+deb http://ppa.launchpad.net/kubuntu-ppa/backports/ubuntu jammy main
+# deb-src http://ppa.launchpad.net/kubuntu-ppa/backports/ubuntu jammy main
+
+# ============================================
+# GAMING REPOSITORIES
+# ============================================
+
+# WineHQ (Latest Wine)
+deb [signed-by=/usr/share/keyrings/winehq-archive.key] https://dl.winehq.org/wine-builds/ubuntu jammy main
+
+# Lutris
+deb [signed-by=/usr/share/keyrings/lutris-archive.key] ppa:lutris-team/lutris
+
+# ============================================
+# MULTIMEDIA CODECS
+# ============================================
+deb http://ppa.launchpad.net/graphics-drivers/ppa/ubuntu jammy main
+
+# ============================================
+# BRAVE BROWSER
+# ============================================
+deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main
+
+# ============================================
+# FLATPAK (via system)
+# ============================================
+# Flatpak repository configured via flatpak remote-add
+
+# ============================================
+# VALEKOS CUSTOM REPOSITORY (Optional)
+# ============================================
+# deb [signed-by=/usr/share/keyrings/valekos-archive-keyring.gpg] https://repo.valekos.org stable main

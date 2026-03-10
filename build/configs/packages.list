@@ -1,0 +1,133 @@
+# ValekOS Package List
+# Minimal essential packages for a functional system
+# Format: one package per line, comments start with #
+
+#======================================
+# KERNEL (CRITICAL)
+#======================================
+linux-image-generic
+linux-headers-generic
+initramfs-tools
+
+#======================================
+# BOOTLOADER (CRITICAL)
+#======================================
+grub-pc
+grub-efi-amd64
+grub-efi-amd64-signed
+shim-signed
+
+#======================================
+# INIT SYSTEM (CRITICAL)
+#======================================
+systemd
+systemd-sysv
+
+#======================================
+# BASE SYSTEM
+#======================================
+sudo
+passwd
+adduser
+locales
+tzdata
+keyboard-configuration
+console-setup
+
+#======================================
+# NETWORK
+#======================================
+network-manager
+curl
+wget
+ca-certificates
+gnupg
+
+#======================================
+# DISPLAY SERVER
+#======================================
+xorg
+xserver-xorg
+xserver-xorg-video-all
+xserver-xorg-input-all
+wayland
+
+#======================================
+# KDE PLASMA
+#======================================
+plasma-desktop
+plasma-workspace
+kde-plasma-desktop
+sddm
+sddm-theme-breeze
+breeze
+breeze-gtk-theme
+kwin
+dolphin
+konsole
+kate
+systemsettings
+
+#======================================
+# FIRMWARE
+#======================================
+linux-firmware
+firmware-amd-graphics
+firmware-iwlwifi
+
+#======================================
+# GRAPHICS
+#======================================
+mesa-vulkan-drivers
+mesa-va-drivers
+mesa-utils
+
+#======================================
+# GAMING
+#======================================
+steam
+lutris
+wine64
+winetricks
+gamemode
+
+#======================================
+# AUDIO
+#======================================
+pipewire
+pipewire-pulse
+wireplumber
+
+#======================================
+# FONTS
+#======================================
+fonts-noto
+fonts-dejavu
+fonts-ubuntu
+
+#======================================
+# UTILITIES
+#======================================
+htop
+gparted
+timeshift
+
+#======================================
+# INSTALLER
+#======================================
+calamares
+qml-module-qtquick2
+qml-module-qtquick-controls2
+
+#======================================
+# LIVE BOOT
+#======================================
+casper
+live-boot
+
+#======================================
+# VM SUPPORT
+#======================================
+open-vm-tools
+spice-vdagent
+qemu-guest-agent

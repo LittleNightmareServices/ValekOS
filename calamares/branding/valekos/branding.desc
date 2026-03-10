@@ -1,0 +1,61 @@
+# ValekOS Calamares Branding Configuration
+
+[General]
+# Branding name
+Name=ValekOS
+Version=1.0
+Author=ValekOS Team
+Url=https://github.com/valekos/valekos
+
+# Product information
+ProductName=ValekOS
+ShortProductName=ValekOS
+Version=1.0
+ShortVersion=1.0
+VersionedName=ValekOS 1.0
+ShortVersionedName=ValekOS 1.0
+Subtitle=Gaming-Focused Linux Distribution
+
+# Installer window size
+WindowWidth=1000
+WindowHeight=600
+
+# Sidebar settings
+SidebarBackground=#0F0F14
+SidebarText=#F8FAFC
+SidebarTextSelect=#0EA5E9
+SidebarTextHighlight=#0EA5E9
+
+# Welcome page
+WelcomeStyle=RichText
+WelcomeHeader=Welcome to ValekOS
+WelcomeText=<h2>Welcome to ValekOS Installer</h2><p>ValekOS is a gaming-focused Linux distribution featuring KDE Plasma with HyperOS-inspired theming, optimized for AMD hardware, and pre-configured for the best gaming experience.</p><p>This installer will guide you through the setup process.</p>
+
+# Requirements
+RequiredSpace=32
+RequiredRam=4
+
+# Slideshow
+Slideshow=slideshow.qml
+SlideshowAPI=2
+
+# Images
+ProductLogo=logo.png
+ProductIcon=icon.png
+ProductWelcome=welcome.png
+
+# Stylesheet
+StyleSheet=style.qss
+
+[Navigation]
+# Navigation buttons
+Back=Back
+Next=Next
+Cancel=Cancel
+
+[Finished]
+# Finished page
+RestartNow=Restart Now
+RestartLater=Restart Later
+FinishedTitle=Installation Complete
+FinishedText=<h2>Thank you for installing ValekOS!</h2><p>Your system is now ready to use. After restarting, you can log in with the credentials you created during setup.</p><p>Enjoy your gaming experience!</p>

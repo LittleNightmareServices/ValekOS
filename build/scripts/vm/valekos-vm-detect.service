@@ -1,0 +1,14 @@
+[Unit]
+Description=ValekOS VM Detection and Optimization
+After=multi-user.target
+Before=display-manager.service
+ConditionPathExists=!/run/valekos/vm-info
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/valekos-vm-detect
+RemainAfterExit=yes
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,323 @@
+# ValekOS ISO Build Workflow
+# ==========================
+# This workflow builds a bootable ValekOS ISO image
+# 
+# Configuration:
+#   VERSION: The version number for the release
+#   RELEASE_STATUS: "stable", "beta", or "alpha"
+#
+# Manual trigger: Go to Actions → Build ValekOS ISO → Run workflow
+# Automatic trigger: Push to main branch
+
+name: Build ValekOS ISO
+
+on:
+  push:
+    branches: [ main, master ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0, 1.1-beta)'
+        required: false
+        default: ''
+      release_status:
+        description: 'Release status'
+        required: false
+        default: 'stable'
+        type: choice
+        options:
+          - stable
+          - beta
+          - alpha
+
+#======================================
+# CONFIGURATION
+#======================================
+env:
+  # Version configuration - change these for releases
+  VERSION: ${{ github.event.inputs.version || '1.0' }}
+  RELEASE_STATUS: ${{ github.event.inputs.release_status || 'stable' }}
+  DISTRO_NAME: "ValekOS"
+  UBUNTU_RELEASE: "jammy"
+
+jobs:
+  #======================================
+  # BUILD JOB
+  #======================================
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360  # 6 hours max
+    
+    permissions:
+      contents: write  # Required for creating releases
+
+    steps:
+      #------------------------------------
+      # Setup
+      #------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Free disk space
+        run: |
+          echo "::group::Freeing disk space..."
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo apt-get clean
+          sudo apt-get autoremove -y
+          echo "::endgroup::"
+          
+      - name: Install build dependencies
+        run: |
+          echo "::group::Installing build dependencies..."
+          sudo apt-get update
+          sudo apt-get install -y \
+            debootstrap \
+            squashfs-tools \
+            xorriso \
+            isolinux \
+            syslinux-common \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
+            grub-efi-amd64-signed \
+            shim-signed \
+            mtools \
+            dosfstools \
+            parted \
+            gdisk \
+            wget \
+            curl \
+            ca-certificates \
+            gnupg
+          echo "::endgroup::"
+
+      - name: Verify dependencies
+        run: |
+          echo "Checking required tools..."
+          command -v debootstrap || { echo "ERROR: debootstrap not found"; exit 1; }
+          command -v mksquashfs || { echo "ERROR: mksquashfs not found"; exit 1; }
+          command -v xorriso || { echo "ERROR: xorriso not found"; exit 1; }
+          echo "All dependencies installed successfully"
+
+      #------------------------------------
+      # Build Steps
+      #------------------------------------
+      - name: Create build directories
+        run: |
+          sudo mkdir -p /build/chroot
+          sudo mkdir -p /build/output
+          sudo chmod 755 /build
+
+      - name: Bootstrap base system
+        id: bootstrap
+        run: |
+          echo "::group::Bootstrapping base system..."
+          cd valekos/build/scripts
+          
+          sudo bash bootstrap.sh \
+            --distro ubuntu \
+            --release ${{ env.UBUNTU_RELEASE }} \
+            --chroot /build/chroot \
+            --version ${{ env.VERSION }}
+          
+          echo "::endgroup::"
+          
+          # Verify bootstrap
+          if [[ ! -d "/build/chroot/bin" ]]; then
+            echo "::error::Bootstrap failed - chroot not created"
+            exit 1
+          fi
+          
+          echo "bootstrap_size=$(sudo du -sh /build/chroot | cut -f1)" >> $GITHUB_OUTPUT
+
+      - name: Configure system (chroot)
+        id: chroot
+        run: |
+          echo "::group::Configuring system in chroot..."
+          cd valekos/build/scripts
+          
+          # Determine theming path
+          THEMING_PATH=""
+          if [[ -d "$(pwd)/../theming" ]]; then
+            THEMING_PATH="$(pwd)/../theming"
+          fi
+          
+          sudo bash chroot.sh \
+            --chroot /build/chroot \
+            --version ${{ env.VERSION }} \
+            --theming-dir "$THEMING_PATH"
+          
+          echo "::endgroup::"
+          
+          # Verify kernel installation
+          if ! ls /build/chroot/boot/vmlinuz-* 1>/dev/null 2>&1; then
+            echo "::error::CRITICAL: No kernel installed!"
+            echo "Boot directory contents:"
+            ls -la /build/chroot/boot/ 2>/dev/null || echo "  (empty)"
+            exit 1
+          fi
+          
+          KERNEL_VER=$(ls /build/chroot/boot/vmlinuz-* | head -1 | sed 's/.*vmlinuz-//')
+          echo "kernel_version=$KERNEL_VER" >> $GITHUB_OUTPUT
+          echo "chroot_size=$(sudo du -sh /build/chroot | cut -f1)" >> $GITHUB_OUTPUT
+
+      - name: Build ISO image
+        id: build_iso
+        run: |
+          echo "::group::Building ISO image..."
+          cd valekos/build/scripts
+          
+          # Determine paths
+          GRUB_PATH=""
+          if [[ -d "$(pwd)/../bootloaders/grub" ]]; then
+            GRUB_PATH="$(pwd)/../bootloaders/grub"
+          fi
+          
+          sudo bash build-iso.sh \
+            --chroot /build/chroot \
+            --output /build/output \
+            --name "${{ env.DISTRO_NAME }}" \
+            --version ${{ env.VERSION }} \
+            --grub-dir "$GRUB_PATH"
+          
+          echo "::endgroup::"
+          
+          # Verify ISO was created
+          ISO_FILE="/build/output/valekos-${{ env.VERSION }}-amd64.iso"
+          if [[ ! -f "$ISO_FILE" ]]; then
+            echo "::error::ISO file not created!"
+            exit 1
+          fi
+          
+          echo "iso_file=$ISO_FILE" >> $GITHUB_OUTPUT
+          echo "iso_size=$(du -sh $ISO_FILE | cut -f1)" >> $GITHUB_OUTPUT
+
+      #------------------------------------
+      # Artifacts
+      #------------------------------------
+      - name: Generate build info
+        run: |
+          ISO_FILE="/build/output/valekos-${{ env.VERSION }}-amd64.iso"
+          
+          cat > /build/output/BUILD_INFO.txt << EOF
+          ValekOS Build Information
+          =========================
+          Version: ${{ env.VERSION }}
+          Status: ${{ env.RELEASE_STATUS }}
+          Build Date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          Git Commit: ${{ github.sha }}
+          Git Ref: ${{ github.ref }}
+          Runner: ${{ runner.os }}
+          
+          Components:
+          - Kernel: ${{ steps.chroot.outputs.kernel_version }}
+          - Chroot Size: ${{ steps.chroot.outputs.chroot_size }}
+          - ISO Size: ${{ steps.build_iso.outputs.iso_size }}
+          
+          Checksums:
+          $(cd /build/output && sha256sum *.iso)
+          EOF
+          
+          cat /build/output/BUILD_INFO.txt
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: valekos-${{ env.VERSION }}-amd64
+          path: |
+            /build/output/*.iso
+            /build/output/SHA256SUMS
+            /build/output/MD5SUMS
+            /build/output/BUILD_INFO.txt
+          retention-days: 30
+          if-no-files-found: error
+
+      #------------------------------------
+      # Release (only on main branch push)
+      #------------------------------------
+      - name: Create Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ValekOS ${{ env.VERSION }}
+          tag_name: v${{ env.VERSION }}
+          body: |
+            ## ValekOS ${{ env.VERSION }}
+            
+            **Status:** ${{ env.RELEASE_STATUS }}
+            **Build Date:** $(date -u '+%Y-%m-%d')
+            
+            ### Download
+            - `valekos-${{ env.VERSION }}-amd64.iso` - Bootable ISO image
+            
+            ### Checksum
+            See `SHA256SUMS` file for verification.
+            
+            ### Installation
+            1. Flash ISO to USB drive using Rufus (Windows) or dd (Linux)
+            2. Boot from USB
+            3. Follow installer instructions
+            
+            ### System Requirements
+            - 64-bit (x86_64) processor
+            - 4GB RAM minimum (8GB recommended)
+            - 20GB disk space minimum
+            - UEFI or BIOS boot support
+          files: |
+            /build/output/*.iso
+            /build/output/SHA256SUMS
+            /build/output/MD5SUMS
+            /build/output/BUILD_INFO.txt
+          draft: ${{ env.RELEASE_STATUS != 'stable' }}
+          prerelease: ${{ env.RELEASE_STATUS != 'stable' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  #======================================
+  # TEST JOB (Optional)
+  #======================================
+  test-boot:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Download ISO
+        uses: actions/download-artifact@v4
+        with:
+          name: valekos-${{ env.VERSION }}-amd64
+
+      - name: Install QEMU
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86 ovmf
+
+      - name: Test UEFI Boot
+        run: |
+          ISO_FILE=$(ls *.iso | head -1)
+          echo "Testing UEFI boot with $ISO_FILE..."
+          
+          # Quick boot test (30 seconds)
+          timeout 30s qemu-system-x86_64 \
+            -m 2048 \
+            -cdrom "$ISO_FILE" \
+            -bios /usr/share/OVMF/OVMF_CODE.fd \
+            -nographic \
+            -serial mon:stdio \
+            -boot d || true
+          
+          echo "Boot test completed"
+
+#======================================
+# WORKFLOW COMPLETE
+#======================================

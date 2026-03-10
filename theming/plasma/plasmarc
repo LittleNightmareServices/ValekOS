@@ -1,0 +1,27 @@
+# ValekOS Plasma Configuration - HyperOS3 Style
+# This file configures KDE Plasma to use HyperOS3-inspired notifications and widgets
+
+[Notifications]
+# Notification settings
+PopupPosition=Top
+PopupTimeout=5000
+ShowActions=true
+
+[Theme]
+# Theme configuration
+name=com.valekos.valekos
+
+[General]
+# General settings
+BlurEnabled=true
+TranslucencyEnabled=true
+AnimationsEnabled=true
+AnimationDurationFactor=0.8
+
+[KDE]
+# KDE settings
+LookAndFeelPackage=com.valekos.valekos
+
+[WidgetStyle]
+# Widget style
+widgetStyle=Breeze

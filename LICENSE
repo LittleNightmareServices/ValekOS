@@ -1,0 +1,72 @@
+GNU GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
+
+Copyright (C) 2024 ValekOS Team
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+================================================================================
+
+The full text of the GNU General Public License v3.0 can be found at:
+https://www.gnu.org/licenses/gpl-3.0.txt
+
+================================================================================
+
+ADDITIONAL LICENSES
+
+This distribution includes software from various sources with their own licenses:
+
+1. Linux Mint Components
+   - Various GPL licenses
+   - https://linuxmint.com
+
+2. KDE Plasma and KDE Applications
+   - LGPL v2.1 or v3
+   - https://kde.org
+
+3. Linux Kernel
+   - GPL v2
+   - https://kernel.org
+
+4. Brave Browser
+   - Mozilla Public License 2.0
+   - https://brave.com
+
+5. Steam
+   - Steam Subscriber Agreement
+   - https://store.steampowered.com
+
+6. Other packages
+   - See individual package licenses
+
+================================================================================
+
+TRADEMARK NOTICE
+
+"ValekOS" and the ValekOS logo are trademarks of the ValekOS project.
+You may use the name "ValekOS" to refer to this distribution, but you may
+not use the ValekOS name or logo to endorse or promote products derived
+from this software without specific prior written permission.
+
+================================================================================
+
+DISCLAIMER
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
