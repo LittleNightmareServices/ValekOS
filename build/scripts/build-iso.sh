@@ -356,13 +356,23 @@ log_success "GRUB configured"
 #======================================
 # CREATE EFI BOOT
 #======================================
+# Create embedded config to find the real grub.cfg
+# This is used for both EFI and BIOS monolithic images
+EMBED_CFG=$(mktemp)
+cat > "$EMBED_CFG" << EOF
+search --file --set=root /boot/grub/grub.cfg
+if [ -z "\$root" ]; then
+    set root=(cd0)
+fi
+set prefix=(\$root)/boot/grub
+configfile /boot/grub/grub.cfg
+EOF
+
 run_step "Create EFI Image" '
     EFI_IMG="${OUTPUT_DIR}/efi.img"
-    # Create empty 64MB image without depending on /dev/zero
     truncate -s 64M "$EFI_IMG"
     mkfs.vfat -F 32 "$EFI_IMG"
 
-    # Use mtools to populate image (avoids mount -o loop issues in CI)
     mmd -i "$EFI_IMG" ::/EFI
     mmd -i "$EFI_IMG" ::/EFI/BOOT
     mmd -i "$EFI_IMG" ::/boot
@@ -374,53 +384,44 @@ run_step "Create EFI Image" '
         mcopy -i "$EFI_IMG" /usr/lib/grub/x86_64-efi/*.lst ::/boot/grub/x86_64-efi/ || true
     fi
 
-    # Create grub.cfg locally first
-    GRUB_CFG_TMP=$(mktemp)
-    cat > "$GRUB_CFG_TMP" << EOF
-set default=0
-set timeout=10
-insmod all_video
-insmod gfxterm
-terminal_output gfxterm
+    # Place config on EFI partition too
+    mcopy -i "$EFI_IMG" "$EMBED_CFG" ::/EFI/BOOT/grub.cfg
 
-menuentry "Start ${DIST_NAME}" {
-    linux /boot/vmlinuz boot=casper quiet splash ---
-    initrd /boot/initrd
-}
-
-menuentry "Install ${DIST_NAME}" {
-    linux /boot/vmlinuz boot=casper only-ubiquity quiet splash ---
-    initrd /boot/initrd
-}
-EOF
-    mcopy -i "$EFI_IMG" "$GRUB_CFG_TMP" ::/EFI/BOOT/grub.cfg
-    rm -f "$GRUB_CFG_TMP"
+    # Build monolithic EFI GRUB image
+    EFI_GRUB_TMP=$(mktemp)
+    if grub-mkimage -o "$EFI_GRUB_TMP" -O x86_64-efi -c "$EMBED_CFG" \
+        part_gpt part_msdos iso9660 linux normal search search_fs_file fat all_video gfxterm; then
+        mcopy -i "$EFI_IMG" "$EFI_GRUB_TMP" ::/EFI/BOOT/grubx64.efi
+    else
+        log_warning "Failed to build monolithic EFI GRUB, using fallback"
+        GRUB_SOURCES=(
+            "$CHROOT_DIR/usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed"
+            "$CHROOT_DIR/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi"
+        )
+        for src in "${GRUB_SOURCES[@]}"; do
+            if [[ -f "$src" ]]; then
+                mcopy -i "$EFI_IMG" "$src" ::/EFI/BOOT/grubx64.efi && break
+            fi
+        done
+    fi
 
     # Handle SHIM
     SHIM_SOURCES=(
         "$CHROOT_DIR/usr/lib/shim/shimx64.efi.signed"
-        "$CHROOT_DIR/usr/lib/shim/shimx64.efi"
         "/usr/lib/shim/shimx64.efi.signed"
-        "/usr/lib/shim/shimx64.efi"
-        "/usr/share/shim/shimx64.efi.signed"
     )
+    SHIM_FOUND=false
     for src in "${SHIM_SOURCES[@]}"; do
         if [[ -f "$src" ]]; then
-            mcopy -i "$EFI_IMG" "$src" ::/EFI/BOOT/BOOTX64.EFI && break
+            mcopy -i "$EFI_IMG" "$src" ::/EFI/BOOT/BOOTX64.EFI && SHIM_FOUND=true && break
         fi
     done
 
-    # Handle GRUB
-    GRUB_SOURCES=(
-        "$CHROOT_DIR/usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed"
-        "$CHROOT_DIR/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi"
-        "/usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed"
-    )
-    for src in "${GRUB_SOURCES[@]}"; do
-        if [[ -f "$src" ]]; then
-            mcopy -i "$EFI_IMG" "$src" ::/EFI/BOOT/grubx64.efi && break
-        fi
-    done
+    # Fallback if no shim
+    if [[ "$SHIM_FOUND" = false ]]; then
+        mcopy -i "$EFI_IMG" ::/EFI/BOOT/grubx64.efi ::/EFI/BOOT/BOOTX64.EFI || true
+    fi
+    rm -f "$EFI_GRUB_TMP"
 
     # Handle MOK
     MOK_SOURCES=(
@@ -459,8 +460,8 @@ if [[ -n "$ISOLINUX_BIN" ]]; then
     
     # Create BIOS bootable GRUB core image
     if command -v grub-mkimage &>/dev/null && [[ -d /usr/lib/grub/i386-pc ]]; then
-        grub-mkimage -o "$CORE_IMG" -O i386-pc -p "(cd0)/boot/grub" \
-            biosdisk part_msdos part_gpt ext2 iso9660 linux normal \
+        grub-mkimage -o "$CORE_IMG" -O i386-pc -c "$EMBED_CFG" \
+            biosdisk part_msdos part_gpt iso9660 linux normal search search_fs_file \
             2>/dev/null || true
         
         if [[ -f "$CORE_IMG" ]]; then
@@ -541,6 +542,7 @@ log_step "Cleaning up..."
 rm -rf "${ISO_ROOT:?}"
 rm -f "$EFI_IMG"
 rm -f "${CORE_IMG:-}" 2>/dev/null || true
+rm -f "$EMBED_CFG"
 
 #======================================
 # VERIFY & SUMMARIZE
