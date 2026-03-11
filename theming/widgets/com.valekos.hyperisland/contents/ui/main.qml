@@ -12,14 +12,12 @@ Item {
     width: island.width + 40
     height: island.height + 40
 
-    // User Settings
     readonly property color bgColor: Plasmoid.configuration.backgroundColor || "#CC000000"
     readonly property color accentColor: Plasmoid.configuration.accentColor || "#0EA5E9"
     readonly property color textPrimary: "#FFFFFF"
     readonly property color textSecondary: "#94A3B8"
     readonly property bool showBattery: Plasmoid.configuration.showBattery || true
 
-    // Data Sources
     PlasmaCore.DataSource {
         id: mprisSource
         engine: "mpris2"
@@ -45,7 +43,6 @@ Item {
     property int batteryPercent: batterySource.data["Battery"]?.["Percent"] || 0
     property bool isCharging: batterySource.data["Battery"]?.["State"] === "Charging"
 
-    // Dynamic Island Container
     Rectangle {
         id: island
         anchors.centerIn: parent
@@ -65,7 +62,6 @@ Item {
             anchors.centerIn: parent
             spacing: 12
 
-            // Icon / Music Visualizer
             Rectangle {
                 width: 20
                 height: 20
@@ -80,7 +76,6 @@ Item {
                     visible: !isPlaying
                 }
 
-                // Music Animation
                 Row {
                     anchors.centerIn: parent
                     spacing: 2
@@ -102,7 +97,6 @@ Item {
                 }
             }
 
-            // Text info
             ColumnLayout {
                 spacing: 0
                 visible: island.expanded || trackTitle !== "" || (showBattery && batteryPercent < 20)

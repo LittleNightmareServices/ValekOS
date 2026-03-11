@@ -12,6 +12,7 @@ show_help() {
     echo "Options:"
     echo "  --set <file.mp3>   Set a custom mp3 as the notification sound"
     echo "  --reset            Reset to default HyperOS sounds"
+    echo "  --gui              Open file dialog to select sound"
     echo "  --list             List available default sounds"
 }
 
@@ -21,12 +22,10 @@ set_sound() {
         echo "Setting notification sound to $file..."
         mkdir -p "$(dirname "$CONFIG_FILE")"
         echo "CUSTOM_SOUND=$file" > "$CONFIG_FILE"
-
-        # Ensure kwriteconfig5 is available
         if command -v kwriteconfig5 &>/dev/null; then
             kwriteconfig5 --file plasmanotifyrc --group Sounds --key NotificationCustom "$file"
         else
-            echo "Warning: kwriteconfig5 not found. Please set manually in Plasma settings."
+            echo "Warning: kwriteconfig5 not found."
         fi
     else
         echo "Error: File $file not found."
@@ -46,7 +45,7 @@ elif [[ $1 == "--gui" ]]; then
             set_sound "$FILE"
         fi
     else
-        echo "Error: kdialog not found. Cannot launch GUI."
+        echo "Error: kdialog not found."
     fi
 else
     show_help

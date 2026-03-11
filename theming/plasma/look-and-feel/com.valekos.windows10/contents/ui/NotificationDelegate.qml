@@ -10,8 +10,6 @@ Rectangle {
     radius: 35
     color: "#CC000000"
 
-    // Bind to the notification model properties
-    // These names are standard for Plasma notification delegates
     property string summary: model.summary || ""
     property string body: model.body || ""
     property var icon: model.icon || "preferences-desktop-notification"

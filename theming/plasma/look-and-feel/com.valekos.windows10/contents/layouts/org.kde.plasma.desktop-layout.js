@@ -20,7 +20,6 @@ for (var i = 0; i < desktops().length; i++) {
 
     // Add Hyper Island widget to the top center of each desktop
     var island = d.addWidget("com.valekos.hyperisland");
-    // Position at top center
 }
 
 var desktopConfig = new ConfigGroup(panel, "General")
