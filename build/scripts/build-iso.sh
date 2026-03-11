@@ -28,6 +28,29 @@ log_warning()  { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error()    { echo -e "${RED}[ERROR]${NC} $1"; }
 log_step()     { echo -e "\n${GREEN}[STEP]${NC} $1"; }
 
+LOG_DIR="/tmp/valekos_iso_logs"
+mkdir -p "$LOG_DIR"
+
+# Run a build step with detailed logging
+run_step() {
+    local step_name="$1"
+    local command="$2"
+    local log_file="$LOG_DIR/${step_name// /_}.log"
+
+    log_step "Starting step: $step_name"
+
+    if eval "$command" > "$log_file" 2>&1; then
+        log_success "Completed: $step_name"
+        return 0
+    else
+        log_error "FAILED: $step_name"
+        echo -e "\n--- BEGIN ERROR LOG: $step_name ---"
+        cat "$log_file"
+        echo -e "--- END ERROR LOG: $step_name ---\n"
+        return 1
+    fi
+}
+
 #======================================
 # ARGUMENTS
 #======================================
@@ -333,30 +356,24 @@ log_success "GRUB configured"
 #======================================
 # CREATE EFI BOOT
 #======================================
-log_step "Creating EFI boot image..."
+run_step "Create EFI Image" '
+    EFI_IMG="${OUTPUT_DIR}/efi.img"
+    dd if=/dev/zero of="$EFI_IMG" bs=1M count=64
+    mkfs.vfat -F 32 "$EFI_IMG"
 
-EFI_IMG="${OUTPUT_DIR}/efi.img"
+    EFI_MNT="${OUTPUT_DIR}/efi_mnt"
+    mkdir -p "$EFI_MNT"
+    mount -o loop "$EFI_IMG" "$EFI_MNT"
 
-# Create 64MB FAT image
-dd if=/dev/zero of="$EFI_IMG" bs=1M count=64 2>/dev/null
-mkfs.vfat -F 32 "$EFI_IMG" 2>/dev/null
+    mkdir -p "$EFI_MNT/EFI/BOOT"
+    mkdir -p "$EFI_MNT/boot/grub/x86_64-efi"
 
-EFI_MNT="${OUTPUT_DIR}/efi_mnt"
-mkdir -p "$EFI_MNT"
-mount -o loop "$EFI_IMG" "$EFI_MNT"
+    if [[ -d /usr/lib/grub/x86_64-efi ]]; then
+        cp /usr/lib/grub/x86_64-efi/*.mod "$EFI_MNT/boot/grub/x86_64-efi/" || true
+        cp /usr/lib/grub/x86_64-efi/*.lst "$EFI_MNT/boot/grub/x86_64-efi/" || true
+    fi
 
-# EFI directory structure
-mkdir -p "$EFI_MNT/EFI/BOOT"
-mkdir -p "$EFI_MNT/boot/grub/x86_64-efi"
-
-# Copy GRUB modules to EFI
-if [[ -d /usr/lib/grub/x86_64-efi ]]; then
-    cp /usr/lib/grub/x86_64-efi/*.mod "$EFI_MNT/boot/grub/x86_64-efi/" 2>/dev/null || true
-    cp /usr/lib/grub/x86_64-efi/*.lst "$EFI_MNT/boot/grub/x86_64-efi/" 2>/dev/null || true
-fi
-
-# EFI GRUB config
-cat > "$EFI_MNT/EFI/BOOT/grub.cfg" << EOF
+    cat > "$EFI_MNT/EFI/BOOT/grub.cfg" << EOF
 set default=0
 set timeout=10
 insmod all_video
@@ -374,55 +391,44 @@ menuentry "Install ${DIST_NAME}" {
 }
 EOF
 
-# Copy signed EFI binaries (Secure Boot support)
-SHIM_SOURCES=(
-    "$CHROOT_DIR/usr/lib/shim/shimx64.efi.signed"
-    "$CHROOT_DIR/usr/lib/shim/shimx64.efi"
-    "/usr/lib/shim/shimx64.efi.signed"
-    "/usr/lib/shim/shimx64.efi"
-    "/usr/share/shim/shimx64.efi.signed"
-)
+    SHIM_SOURCES=(
+        "$CHROOT_DIR/usr/lib/shim/shimx64.efi.signed"
+        "$CHROOT_DIR/usr/lib/shim/shimx64.efi"
+        "/usr/lib/shim/shimx64.efi.signed"
+        "/usr/lib/shim/shimx64.efi"
+        "/usr/share/shim/shimx64.efi.signed"
+    )
+    for src in "${SHIM_SOURCES[@]}"; do
+        if [[ -f "$src" ]]; then
+            cp "$src" "$EFI_MNT/EFI/BOOT/BOOTX64.EFI" && break
+        fi
+    done
 
-for src in "${SHIM_SOURCES[@]}"; do
-    if [[ -f "$src" ]]; then
-        cp "$src" "$EFI_MNT/EFI/BOOT/BOOTX64.EFI" 2>/dev/null && {
-            log_info "Using shim from: $src"
-            break
-        }
-    fi
-done
+    GRUB_SOURCES=(
+        "$CHROOT_DIR/usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed"
+        "$CHROOT_DIR/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi"
+        "/usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed"
+    )
+    for src in "${GRUB_SOURCES[@]}"; do
+        if [[ -f "$src" ]]; then
+            cp "$src" "$EFI_MNT/EFI/BOOT/grubx64.efi" && break
+        fi
+    done
 
-GRUB_SOURCES=(
-    "$CHROOT_DIR/usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed"
-    "$CHROOT_DIR/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi"
-    "/usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed"
-)
+    MOK_SOURCES=(
+        "$CHROOT_DIR/usr/lib/shim/mmx64.efi"
+        "/usr/lib/shim/mmx64.efi"
+    )
+    for src in "${MOK_SOURCES[@]}"; do
+        if [[ -f "$src" ]]; then
+            cp "$src" "$EFI_MNT/EFI/BOOT/" && break
+        fi
+    done
 
-for src in "${GRUB_SOURCES[@]}"; do
-    if [[ -f "$src" ]]; then
-        cp "$src" "$EFI_MNT/EFI/BOOT/grubx64.efi" 2>/dev/null && {
-            log_info "Using grub from: $src"
-            break
-        }
-    fi
-done
-
-# Copy MOK manager for Secure Boot
-MOK_SOURCES=(
-    "$CHROOT_DIR/usr/lib/shim/mmx64.efi"
-    "/usr/lib/shim/mmx64.efi"
-)
-for src in "${MOK_SOURCES[@]}"; do
-    if [[ -f "$src" ]]; then
-        cp "$src" "$EFI_MNT/EFI/BOOT/" 2>/dev/null && break
-    fi
-done
-
-sync
-umount "$EFI_MNT"
-rmdir "$EFI_MNT"
-
-log_success "EFI boot image created"
+    sync
+    umount "$EFI_MNT"
+    rmdir "$EFI_MNT"
+' || exit 1
 
 #======================================
 # CREATE ISO
