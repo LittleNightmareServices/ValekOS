@@ -323,6 +323,9 @@ install_packages "KDE applications" \
 # Spectacle is sometimes named kde-spectacle or unavailable in some base images
 install_packages "Screenshot tool" spectacle || install_packages "Screenshot tool fallback" kde-spectacle || true
 
+# Spectacle is sometimes named kde-spectacle or unavailable in some base images
+install_packages "Screenshot tool" spectacle || install_packages "Screenshot tool fallback" kde-spectacle || true
+
 #======================================
 # INSTALL FIRMWARE
 #======================================
