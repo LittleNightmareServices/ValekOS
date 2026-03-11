@@ -372,8 +372,16 @@ install_packages "Fonts" \
 # INSTALL BRAVE BROWSER
 #======================================
 run_step "Install Brave Browser" '
-    run_chroot "curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg" && \
+    # Create keyrings directory
+    mkdir -p "$CHROOT_DIR/usr/share/keyrings"
+
+    # Download GPG key using host curl to avoid missing curl in chroot
+    curl -fsSLo "$CHROOT_DIR/usr/share/keyrings/brave-browser-archive-keyring.gpg" https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg && \
+
+    # Configure repository
     echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main" > "$CHROOT_DIR/etc/apt/sources.list.d/brave-browser-release.list" && \
+
+    # Update and install
     run_chroot "apt-get update" && \
     run_chroot "apt-get -y install brave-browser"
 ' || log_warning "Brave Browser installation skipped (non-critical)"

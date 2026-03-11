@@ -112,6 +112,8 @@ fonts-ubuntu
 htop
 gparted
 timeshift
+qt5-qml-bin
+qtdeclarative5-dev-tools
 
 #======================================
 # INSTALLER

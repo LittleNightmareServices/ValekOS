@@ -358,22 +358,25 @@ log_success "GRUB configured"
 #======================================
 run_step "Create EFI Image" '
     EFI_IMG="${OUTPUT_DIR}/efi.img"
-    dd if=/dev/zero of="$EFI_IMG" bs=1M count=64
+    # Create empty 64MB image without depending on /dev/zero
+    truncate -s 64M "$EFI_IMG"
     mkfs.vfat -F 32 "$EFI_IMG"
 
-    EFI_MNT="${OUTPUT_DIR}/efi_mnt"
-    mkdir -p "$EFI_MNT"
-    mount -o loop "$EFI_IMG" "$EFI_MNT"
-
-    mkdir -p "$EFI_MNT/EFI/BOOT"
-    mkdir -p "$EFI_MNT/boot/grub/x86_64-efi"
+    # Use mtools to populate image (avoids mount -o loop issues in CI)
+    mmd -i "$EFI_IMG" ::/EFI
+    mmd -i "$EFI_IMG" ::/EFI/BOOT
+    mmd -i "$EFI_IMG" ::/boot
+    mmd -i "$EFI_IMG" ::/boot/grub
+    mmd -i "$EFI_IMG" ::/boot/grub/x86_64-efi
 
     if [[ -d /usr/lib/grub/x86_64-efi ]]; then
-        cp /usr/lib/grub/x86_64-efi/*.mod "$EFI_MNT/boot/grub/x86_64-efi/" || true
-        cp /usr/lib/grub/x86_64-efi/*.lst "$EFI_MNT/boot/grub/x86_64-efi/" || true
+        mcopy -i "$EFI_IMG" /usr/lib/grub/x86_64-efi/*.mod ::/boot/grub/x86_64-efi/ || true
+        mcopy -i "$EFI_IMG" /usr/lib/grub/x86_64-efi/*.lst ::/boot/grub/x86_64-efi/ || true
     fi
 
-    cat > "$EFI_MNT/EFI/BOOT/grub.cfg" << EOF
+    # Create grub.cfg locally first
+    GRUB_CFG_TMP=$(mktemp)
+    cat > "$GRUB_CFG_TMP" << EOF
 set default=0
 set timeout=10
 insmod all_video
@@ -390,7 +393,10 @@ menuentry "Install ${DIST_NAME}" {
     initrd /boot/initrd
 }
 EOF
+    mcopy -i "$EFI_IMG" "$GRUB_CFG_TMP" ::/EFI/BOOT/grub.cfg
+    rm -f "$GRUB_CFG_TMP"
 
+    # Handle SHIM
     SHIM_SOURCES=(
         "$CHROOT_DIR/usr/lib/shim/shimx64.efi.signed"
         "$CHROOT_DIR/usr/lib/shim/shimx64.efi"
@@ -400,10 +406,11 @@ EOF
     )
     for src in "${SHIM_SOURCES[@]}"; do
         if [[ -f "$src" ]]; then
-            cp "$src" "$EFI_MNT/EFI/BOOT/BOOTX64.EFI" && break
+            mcopy -i "$EFI_IMG" "$src" ::/EFI/BOOT/BOOTX64.EFI && break
         fi
     done
 
+    # Handle GRUB
     GRUB_SOURCES=(
         "$CHROOT_DIR/usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed"
         "$CHROOT_DIR/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi"
@@ -411,23 +418,20 @@ EOF
     )
     for src in "${GRUB_SOURCES[@]}"; do
         if [[ -f "$src" ]]; then
-            cp "$src" "$EFI_MNT/EFI/BOOT/grubx64.efi" && break
+            mcopy -i "$EFI_IMG" "$src" ::/EFI/BOOT/grubx64.efi && break
         fi
     done
 
+    # Handle MOK
     MOK_SOURCES=(
         "$CHROOT_DIR/usr/lib/shim/mmx64.efi"
         "/usr/lib/shim/mmx64.efi"
     )
     for src in "${MOK_SOURCES[@]}"; do
         if [[ -f "$src" ]]; then
-            cp "$src" "$EFI_MNT/EFI/BOOT/" && break
+            mcopy -i "$EFI_IMG" "$src" ::/EFI/BOOT/ && break
         fi
     done
-
-    sync
-    umount "$EFI_MNT"
-    rmdir "$EFI_MNT"
 ' || exit 1
 
 #======================================
