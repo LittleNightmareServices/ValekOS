@@ -323,9 +323,6 @@ install_packages "KDE applications" \
 # Spectacle is sometimes named kde-spectacle or unavailable in some base images
 install_packages "Screenshot tool" spectacle || install_packages "Screenshot tool fallback" kde-spectacle || true
 
-# Spectacle is sometimes named kde-spectacle or unavailable in some base images
-install_packages "Screenshot tool" spectacle || install_packages "Screenshot tool fallback" kde-spectacle || true
-
 #======================================
 # INSTALL FIRMWARE
 #======================================
@@ -394,20 +391,19 @@ install_packages "Fonts" \
 #======================================
 log_step "Installing Brave Browser..."
 
-run_chroot '
-if ! command -v brave-browser &>/dev/null; then
-    curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg \
-        https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg 2>/dev/null || true
+# More robust Brave installation
+run_chroot "curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg" || log_warning "Failed to download Brave GPG key"
+
+if [ -f "$CHROOT_DIR/usr/share/keyrings/brave-browser-archive-keyring.gpg" ]; then
+    echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main" \
+        > "$CHROOT_DIR/etc/apt/sources.list.d/brave-browser-release.list"
     
-    if [ -f /usr/share/keyrings/brave-browser-archive-keyring.gpg ]; then
-        echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] \
-            https://brave-browser-apt-release.s3.brave.com/ stable main" \
-            > /etc/apt/sources.list.d/brave-browser-release.list
-        apt-get update
-        apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install brave-browser || echo "Brave install skipped"
-    fi
+    run_chroot "apt-get update" || log_warning "Apt update failed after adding Brave repo"
+
+    install_packages "Brave Browser" brave-browser || log_warning "Brave Browser installation failed"
+else
+    log_warning "Brave GPG key missing, skipping installation"
 fi
-' || log_warning "Brave Browser installation skipped"
 
 #======================================
 # INSTALL SOFTWARE CENTER
@@ -636,12 +632,17 @@ log_info "=== Installed Components ==="
 check_component() {
     local name="$1"
     local check="$2"
+    local critical="${3:-true}"
     
     if eval "$check"; then
         echo "  ✅ $name"
     else
         echo "  ❌ $name (MISSING)"
+        if [[ "$critical" == "true" ]]; then
+            return 1
+        fi
     fi
+    return 0
 }
 
 check_component "Kernel" "ls $CHROOT_DIR/boot/vmlinuz-* 1>/dev/null 2>&1"
@@ -650,8 +651,8 @@ check_component "GRUB" "[ -f $CHROOT_DIR/usr/sbin/grub-install ]"
 check_component "KDE Plasma" "[ -d $CHROOT_DIR/usr/share/plasma ]"
 check_component "Network Manager" "[ -f $CHROOT_DIR/usr/sbin/NetworkManager ]"
 check_component "SDDM" "[ -f $CHROOT_DIR/usr/bin/sddm ]"
-check_component "Calamares" "[ -f $CHROOT_DIR/usr/bin/calamares ]" || echo "     (installer may not work)"
-check_component "Brave Browser" "[ -f $CHROOT_DIR/usr/bin/brave-browser ]" || echo "     (optional)"
+check_component "Calamares" "[ -f $CHROOT_DIR/usr/bin/calamares ]" false
+check_component "Brave Browser" "[ -f $CHROOT_DIR/usr/bin/brave-browser ]" false
 
 echo ""
 
