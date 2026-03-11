@@ -317,8 +317,11 @@ install_packages "KDE Plasma core" \
     sddm sddm-theme-breeze breeze breeze-gtk-theme
 
 install_packages "KDE applications" \
-    dolphin konsole kate okular ark gwenview spectacle \
+    dolphin konsole kate okular ark gwenview \
     systemsettings kinfocenter kscreen powerdevil
+
+# Spectacle is sometimes named kde-spectacle or unavailable in some base images
+install_packages "Screenshot tool" spectacle || install_packages "Screenshot tool fallback" kde-spectacle || true
 
 #======================================
 # INSTALL FIRMWARE
