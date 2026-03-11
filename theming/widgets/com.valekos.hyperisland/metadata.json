@@ -1,0 +1,25 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "valekos@example.com",
+                "Name": "ValekOS Team"
+            }
+        ],
+        "Category": "Utilities",
+        "Description": "Dynamic Island inspired by Xiaomi HyperOS3",
+        "Icon": "preferences-desktop-notification",
+        "Id": "com.valekos.hyperisland",
+        "License": "GPL-3.0",
+        "Name": "Hyper Island",
+        "ServiceTypes": [
+            "Plasma/Applet"
+        ],
+        "Version": "1.0"
+    },
+    "Plasma": {
+        "APIStyle": "Desktop",
+        "MainScript": "ui/main.qml"
+    }
+}
