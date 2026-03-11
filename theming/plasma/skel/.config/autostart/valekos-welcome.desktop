@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Exec=/usr/local/bin/valekos-welcome
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name=ValekOS Welcome
+Comment=Welcome walkthrough for ValekOS

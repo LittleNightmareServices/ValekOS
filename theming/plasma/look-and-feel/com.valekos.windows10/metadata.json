@@ -1,0 +1,20 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "valekos@example.com",
+                "Name": "ValekOS Team"
+            }
+        ],
+        "Description": "Windows 10 Design for ValekOS",
+        "Icon": "preferences-desktop-theme",
+        "Id": "com.valekos.windows10",
+        "License": "GPL-3.0",
+        "Name": "ValekOS Windows 10",
+        "ServiceTypes": [
+            "Plasma/LookAndFeel"
+        ],
+        "Version": "1.0"
+    }
+}

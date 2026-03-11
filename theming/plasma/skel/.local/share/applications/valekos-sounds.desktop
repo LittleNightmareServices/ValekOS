@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Exec=valekos-sounds --gui
+Icon=audio-volume-high
+Name=Notification Sound Settings
+Comment=Change your notification sound
+Categories=Settings;Qt;KDE;

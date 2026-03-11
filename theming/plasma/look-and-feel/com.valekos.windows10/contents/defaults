@@ -1,0 +1,12 @@
+[kdeglobals][KDE]
+LookAndFeelPackage=com.valekos.windows10
+
+[kdeglobals][General]
+ColorScheme=BreezeDark
+ActiveColor=#0078d7
+
+[plasmarc][Theme]
+name=breeze-dark
+
+[shell][General]
+extraItems=org.kde.plasma.volume,org.kde.plasma.networkmanagement,org.kde.plasma.battery

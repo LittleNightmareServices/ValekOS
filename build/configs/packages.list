@@ -50,7 +50,7 @@ xorg
 xserver-xorg
 xserver-xorg-video-all
 xserver-xorg-input-all
-wayland
+plasma-workspace-wayland
 
 #======================================
 # KDE PLASMA
