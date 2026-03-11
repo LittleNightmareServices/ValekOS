@@ -209,7 +209,7 @@ jobs:
         run: |
           ISO_FILE="/build/output/valekos-${{ env.VERSION }}-amd64.iso"
           
-          cat > /build/output/BUILD_INFO.txt << EOF
+          sudo bash -c "cat > /build/output/BUILD_INFO.txt" << EOF
           ValekOS Build Information
           =========================
           Version: ${{ env.VERSION }}
@@ -225,10 +225,10 @@ jobs:
           - ISO Size: ${{ steps.build_iso.outputs.iso_size }}
           
           Checksums:
-          $(cd /build/output && sha256sum *.iso)
+          $(cd /build/output && sudo sha256sum *.iso)
           EOF
           
-          cat /build/output/BUILD_INFO.txt
+          sudo cat /build/output/BUILD_INFO.txt
 
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
