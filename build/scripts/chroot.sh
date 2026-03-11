@@ -519,13 +519,33 @@ if [[ -n "${THEMING_DIR:-}" && -d "$THEMING_DIR" ]]; then
     
     mkdir -p "$CHROOT_DIR/usr/share/wallpapers/ValekOS"
     mkdir -p "$CHROOT_DIR/usr/share/color-schemes"
+    mkdir -p "$CHROOT_DIR/usr/share/plasma/look-and-feel"
+    mkdir -p "$CHROOT_DIR/usr/share/plasma/plasmoids"
+    mkdir -p "$CHROOT_DIR/usr/local/bin"
     
     [[ -d "$THEMING_DIR/wallpapers" ]] && \
         cp -r "$THEMING_DIR/wallpapers"/* "$CHROOT_DIR/usr/share/wallpapers/ValekOS/" 2>/dev/null || true
     
     [[ -d "$THEMING_DIR/color-schemes" ]] && \
         cp -r "$THEMING_DIR/color-schemes"/* "$CHROOT_DIR/usr/share/color-schemes/" 2>/dev/null || true
-    
+
+    # Install Windows 10 Look and Feel
+    [[ -d "$THEMING_DIR/plasma/look-and-feel/com.valekos.windows10" ]] && \
+        cp -r "$THEMING_DIR/plasma/look-and-feel/com.valekos.windows10" "$CHROOT_DIR/usr/share/plasma/look-and-feel/" 2>/dev/null || true
+
+    # Install Hyper Island widget
+    [[ -d "$THEMING_DIR/widgets/com.valekos.hyperisland" ]] && \
+        cp -r "$THEMING_DIR/widgets/com.valekos.hyperisland" "$CHROOT_DIR/usr/share/plasma/plasmoids/" 2>/dev/null || true
+
+    # Install custom scripts
+    [[ -f "$SCRIPT_DIR/custom/valekos-sounds.sh" ]] && \
+        cp "$SCRIPT_DIR/custom/valekos-sounds.sh" "$CHROOT_DIR/usr/local/bin/valekos-sounds" && \
+        chmod +x "$CHROOT_DIR/usr/local/bin/valekos-sounds"
+
+    # Install skel config for default theme
+    [[ -d "$THEMING_DIR/plasma/skel" ]] && \
+        cp -r "$THEMING_DIR/plasma/skel/." "$CHROOT_DIR/etc/skel/" 2>/dev/null || true
+
     log_success "Theming applied"
 fi
 

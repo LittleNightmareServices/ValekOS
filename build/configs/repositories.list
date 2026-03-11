@@ -2,21 +2,18 @@
 # Format: deb [options] uri suite components
 
 # ============================================
+# LINUX MINT (Victoria - 21.3)
+# Based on Ubuntu 22.04 Jammy
+# ============================================
+deb http://packages.linuxmint.com victoria main upstream import backport
+
+# ============================================
 # UBUNTU BASE (22.04 LTS - Jammy)
 # ============================================
 deb http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse
 deb http://archive.ubuntu.com/ubuntu jammy-updates main restricted universe multiverse
 deb http://archive.ubuntu.com/ubuntu jammy-security main restricted universe multiverse
 deb http://archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse
-
-# Source repositories (for building packages)
-# deb-src http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse
-
-# ============================================
-# LINUX MINT (Victoria - 21.3)
-# ============================================
-deb http://packages.linuxmint.com victoria main upstream import backport
-# deb-src http://packages.linuxmint.com victoria main upstream import backport
 
 # ============================================
 # KDE PLASMA BACKPORTS (Latest KDE)

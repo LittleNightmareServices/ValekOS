@@ -122,7 +122,7 @@ jobs:
         id: bootstrap
         run: |
           echo "::group::Bootstrapping base system..."
-          cd valekos/build/scripts
+          cd build/scripts
           
           sudo bash bootstrap.sh \
             --distro ubuntu \
@@ -144,12 +144,12 @@ jobs:
         id: chroot
         run: |
           echo "::group::Configuring system in chroot..."
-          cd valekos/build/scripts
+          cd build/scripts
           
           # Determine theming path
           THEMING_PATH=""
-          if [[ -d "$(pwd)/../theming" ]]; then
-            THEMING_PATH="$(pwd)/../theming"
+          if [[ -d "$(pwd)/../../theming" ]]; then
+            THEMING_PATH="$(pwd)/../../theming"
           fi
           
           sudo bash chroot.sh \
@@ -175,12 +175,12 @@ jobs:
         id: build_iso
         run: |
           echo "::group::Building ISO image..."
-          cd valekos/build/scripts
+          cd build/scripts
           
           # Determine paths
           GRUB_PATH=""
-          if [[ -d "$(pwd)/../bootloaders/grub" ]]; then
-            GRUB_PATH="$(pwd)/../bootloaders/grub"
+          if [[ -d "$(pwd)/../../bootloaders/grub" ]]; then
+            GRUB_PATH="$(pwd)/../../bootloaders/grub"
           fi
           
           sudo bash build-iso.sh \
