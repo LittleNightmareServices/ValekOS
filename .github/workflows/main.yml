@@ -242,27 +242,26 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-           #------------------------------------
-      # Release (only on main branch push)
       #------------------------------------
-      - name: Create Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v1
-        with:
-                - name: Create Release (manual / target main)
+      # Release
+      #------------------------------------
+      - name: Create Release (manual / target main)
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
+          # Prüfen, ob bei manuellem Start der Haken gesetzt wurde
           if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.create_release }}" != "true" ]; then
             echo "Skipping release (manual input not set)"
             exit 0
           fi
+          
+          # Release via GitHub CLI erstellen
           gh release create v${{ env.VERSION }} /build/output/*.iso \
             --repo ${{ github.repository }} \
             --target main \
             --title "ValekOS ${{ env.VERSION }}" \
             --notes "Status: ${{ env.RELEASE_STATUS }}
-Build Date: $(date -u '+%Y-%m-%d')
-Includes: ISO, checksums, BUILD_INFO.txt"
+          Build Date: $(date -u '+%Y-%m-%d')
+          Includes: ISO, checksums, BUILD_INFO.txt"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   #======================================
