@@ -389,9 +389,11 @@ run_step "Create EFI Image" '
 
     # Build monolithic EFI GRUB image
     EFI_GRUB_TMP=$(mktemp)
+    GRUB_BUILT=false
     if grub-mkimage -o "$EFI_GRUB_TMP" -O x86_64-efi -c "$EMBED_CFG" \
         part_gpt part_msdos iso9660 linux normal search search_fs_file fat all_video gfxterm; then
         mcopy -i "$EFI_IMG" "$EFI_GRUB_TMP" ::/EFI/BOOT/grubx64.efi
+        GRUB_BUILT=true
     else
         log_warning "Failed to build monolithic EFI GRUB, using fallback"
         GRUB_SOURCES=(
@@ -400,7 +402,7 @@ run_step "Create EFI Image" '
         )
         for src in "${GRUB_SOURCES[@]}"; do
             if [[ -f "$src" ]]; then
-                mcopy -i "$EFI_IMG" "$src" ::/EFI/BOOT/grubx64.efi && break
+                mcopy -i "$EFI_IMG" "$src" ::/EFI/BOOT/grubx64.efi && GRUB_BUILT=true && break
             fi
         done
     fi
@@ -417,9 +419,27 @@ run_step "Create EFI Image" '
         fi
     done
 
-    # Fallback if no shim
-    if [[ "$SHIM_FOUND" = false ]]; then
-        mcopy -i "$EFI_IMG" ::/EFI/BOOT/grubx64.efi ::/EFI/BOOT/BOOTX64.EFI || true
+    # Fallback if no shim - use the GRUB we just built or found
+    if [[ "$SHIM_FOUND" = false && "$GRUB_BUILT" = true ]]; then
+        FALLBACK_TMP=$(mktemp)
+        if [[ -f "$EFI_GRUB_TMP" ]]; then
+             cp "$EFI_GRUB_TMP" "$FALLBACK_TMP"
+        else
+             GRUB_SOURCES=(
+                 "$CHROOT_DIR/usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed"
+                 "$CHROOT_DIR/usr/lib/grub/x86_64-efi/monolithic/grubx64.efi"
+             )
+             for src in "${GRUB_SOURCES[@]}"; do
+                 if [[ -f "$src" ]]; then
+                     cp "$src" "$FALLBACK_TMP" && break
+                 fi
+             done
+        fi
+
+        if [[ -s "$FALLBACK_TMP" ]]; then
+            mcopy -i "$EFI_IMG" "$FALLBACK_TMP" ::/EFI/BOOT/BOOTX64.EFI
+        fi
+        rm -f "$FALLBACK_TMP"
     fi
     rm -f "$EFI_GRUB_TMP"
 
@@ -461,7 +481,7 @@ if [[ -n "$ISOLINUX_BIN" ]]; then
     # Create BIOS bootable GRUB core image
     if command -v grub-mkimage &>/dev/null && [[ -d /usr/lib/grub/i386-pc ]]; then
         grub-mkimage -o "$CORE_IMG" -O i386-pc -c "$EMBED_CFG" \
-            biosdisk part_msdos part_gpt iso9660 linux normal search search_fs_file \
+            biosdisk part_msdos part_gpt iso9660 linux normal search search_fs_file fat all_video gfxterm \
             2>/dev/null || true
         
         if [[ -f "$CORE_IMG" ]]; then
@@ -484,7 +504,7 @@ if [[ -n "$ISOLINUX_BIN" ]]; then
         -no-emul-boot \
         -isohybrid-gpt-basdat \
         -append_partition 2 0xef "$EFI_IMG" \
-        "$ISO_ROOT" 2>/dev/null; then
+        "$ISO_ROOT"; then
         ISO_SUCCESS=true
         log_success "Hybrid ISO created (BIOS + UEFI)"
     fi

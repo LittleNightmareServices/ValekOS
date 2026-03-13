@@ -243,27 +243,46 @@ jobs:
           if-no-files-found: error
 
       #------------------------------------
-      # Release
+      # Release (only on main branch push)
       #------------------------------------
-      - name: Create Release (manual / target main)
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        run: |
-          # Prüfen, ob bei manuellem Start der Haken gesetzt wurde
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.create_release }}" != "true" ]; then
-            echo "Skipping release (manual input not set)"
-            exit 0
-          fi
-          
-          # Release via GitHub CLI erstellen
-          gh release create v${{ env.VERSION }} /build/output/*.iso \
-            --repo ${{ github.repository }} \
-            --target main \
-            --title "ValekOS ${{ env.VERSION }}" \
-            --notes "Status: ${{ env.RELEASE_STATUS }}
-          Build Date: $(date -u '+%Y-%m-%d')
-          Includes: ISO, checksums, BUILD_INFO.txt"
+      - name: Create Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ValekOS ${{ env.VERSION }}
+          tag_name: v${{ env.VERSION }}
+          body: |
+            ## ValekOS ${{ env.VERSION }}
+
+            **Status:** ${{ env.RELEASE_STATUS }}
+            **Build Date:** $(date -u '+%Y-%m-%d')
+
+            ### Download
+            - `valekos-${{ env.VERSION }}-amd64.iso` - Bootable ISO image
+
+            ### Checksum
+            See `SHA256SUMS` file for verification.
+
+            ### Installation
+            1. Flash ISO to USB drive using Rufus (Windows) or dd (Linux)
+            2. Boot from USB
+            3. Follow installer instructions
+
+            ### System Requirements
+            - 64-bit (x86_64) processor
+            - 4GB RAM minimum (8GB recommended)
+            - 20GB disk space minimum
+            - UEFI or BIOS boot support
+          files: |
+            /build/output/*.iso
+            /build/output/SHA256SUMS
+            /build/output/MD5SUMS
+            /build/output/BUILD_INFO.txt
+          draft: ${{ env.RELEASE_STATUS != 'stable' }}
+          prerelease: ${{ env.RELEASE_STATUS != 'stable' }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   #======================================
   # TEST JOB (Optional)
   #======================================
